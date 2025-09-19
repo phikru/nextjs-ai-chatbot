@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import { generateUUID } from '@/lib/utils';
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
@@ -46,15 +47,15 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                   className="h-8 p-1 md:h-fit md:p-2"
                   onClick={() => {
                     setOpenMobile(false);
-                    router.push('/');
-                    router.refresh();
+                    const newChatId = generateUUID();
+                    router.push(`/chat/${newChatId}`);
                   }}
                 >
                   <PlusIcon />
                 </Button>
               </TooltipTrigger>
               <TooltipContent align="end" className="hidden md:block">
-                New Chat
+                Neuer Chat
               </TooltipContent>
             </Tooltip>
           </div>
