@@ -9,18 +9,13 @@ import { Button } from '@/components/ui/button';
 import { PlusIcon, VercelIcon } from './icons';
 import { useSidebar } from './ui/sidebar';
 import { memo } from 'react';
-import { type VisibilityType, VisibilitySelector } from './visibility-selector';
 import type { Session } from 'next-auth';
 
 function PureChatHeader({
   chatId,
-  selectedVisibilityType,
-  isReadonly,
   session,
 }: {
   chatId: string;
-  selectedVisibilityType: VisibilityType;
-  isReadonly: boolean;
   session: Session;
 }) {
   const router = useRouter();
@@ -46,14 +41,6 @@ function PureChatHeader({
         </Button>
       )}
 
-      {!isReadonly && (
-        <VisibilitySelector
-          chatId={chatId}
-          selectedVisibilityType={selectedVisibilityType}
-          className="order-1 md:order-2"
-        />
-      )}
-
       <Button
         className="order-3 hidden bg-zinc-900 px-2 text-zinc-50 hover:bg-zinc-800 md:ml-auto md:flex md:h-fit dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
         asChild
@@ -71,9 +58,5 @@ function PureChatHeader({
 }
 
 export const ChatHeader = memo(PureChatHeader, (prevProps, nextProps) => {
-  return (
-    prevProps.chatId === nextProps.chatId &&
-    prevProps.selectedVisibilityType === nextProps.selectedVisibilityType &&
-    prevProps.isReadonly === nextProps.isReadonly
-  );
+  return prevProps.chatId === nextProps.chatId;
 });

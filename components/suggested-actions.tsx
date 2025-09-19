@@ -3,21 +3,15 @@
 import { motion } from 'framer-motion';
 import { memo } from 'react';
 import type { UseChatHelpers } from '@ai-sdk/react';
-import type { VisibilityType } from './visibility-selector';
 import type { ChatMessage } from '@/lib/types';
 import { Suggestion } from './elements/suggestion';
 
 interface SuggestedActionsProps {
   chatId: string;
   sendMessage: UseChatHelpers<ChatMessage>['sendMessage'];
-  selectedVisibilityType: VisibilityType;
 }
 
-function PureSuggestedActions({
-  chatId,
-  sendMessage,
-  selectedVisibilityType,
-}: SuggestedActionsProps) {
+function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
   const suggestedActions = [
     'What are the advantages of using Next.js?',
     "Write code to demonstrate Dijkstra's algorithm",
@@ -60,10 +54,6 @@ function PureSuggestedActions({
 export const SuggestedActions = memo(
   PureSuggestedActions,
   (prevProps, nextProps) => {
-    if (prevProps.chatId !== nextProps.chatId) return false;
-    if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType)
-      return false;
-
-    return true;
+    return prevProps.chatId === nextProps.chatId;
   },
 );
