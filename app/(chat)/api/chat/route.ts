@@ -25,7 +25,6 @@ import { createDocument } from '@/lib/ai/tools/create-document';
 import { updateDocument } from '@/lib/ai/tools/update-document';
 import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { getWeather } from '@/lib/ai/tools/get-weather';
-import { isProductionEnvironment } from '@/lib/constants';
 import { myProvider } from '@/lib/ai/providers';
 import { entitlementsByUserType } from '@/lib/ai/entitlements';
 import { postRequestBodySchema, type PostRequestBody } from './schema';
@@ -39,6 +38,7 @@ import { ChatSDKError } from '@/lib/errors';
 import type { ChatMessage } from '@/lib/types';
 import type { ChatModel } from '@/lib/ai/models';
 import type { VisibilityType } from '@/components/visibility-selector';
+import { langfuse } from '@/lib/langfuse';
 
 export const maxDuration = 60;
 
@@ -135,6 +135,8 @@ export async function POST(request: Request) {
       country,
     };
 
+    const inputText = message.parts.find((part) => part.type === 'text')?.text;
+
     await saveMessages({
       messages: [
         {
@@ -153,11 +155,23 @@ export async function POST(request: Request) {
 
     let finalUsage: LanguageModelUsage | undefined;
 
+    // Fetch prompt from Langfuse Prompt Management
+    let langfusePrompt: any;
+    try {
+      langfusePrompt = await langfuse.prompt.get('supervisor-chat');
+    } catch (error) {
+      console.warn('Failed to fetch prompt from Langfuse:', error);
+      // Fallback to local prompt if Langfuse is not available
+    }
+
     const stream = createUIMessageStream({
       execute: ({ writer: dataStream }) => {
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
-          system: systemPrompt({ selectedChatModel, requestHints }),
+          system:
+            (langfusePrompt?.type === 'text'
+              ? langfusePrompt.prompt
+              : undefined) || systemPrompt({ selectedChatModel, requestHints }),
           messages: convertToModelMessages(uiMessages),
           stopWhen: stepCountIs(5),
           experimental_activeTools: [],
@@ -171,11 +185,7 @@ export async function POST(request: Request) {
               dataStream,
             }),
           },
-          experimental_telemetry: {
-            isEnabled: isProductionEnvironment,
-            functionId: 'stream-text',
-          },
-          onFinish: ({ usage }) => {
+          onFinish: ({ usage, text }) => {
             finalUsage = usage;
             dataStream.write({ type: 'data-usage', data: usage });
           },
@@ -212,13 +222,17 @@ export async function POST(request: Request) {
             console.warn('Unable to persist last usage for chat', id, err);
           }
         }
+
+        // Langfuse trace is already completed in onFinish
       },
-      onError: () => {
+      onError: (error: unknown) => {
         return 'Oops, an error occurred!';
       },
     });
 
     const streamContext = getStreamContext();
+
+    // Langfuse Prompt Management is active
 
     if (streamContext) {
       return new Response(
@@ -238,6 +252,8 @@ export async function POST(request: Request) {
     return new ChatSDKError('offline:chat').toResponse();
   }
 }
+
+// POST handler is now a regular async function
 
 export async function DELETE(request: Request) {
   const { searchParams } = new URL(request.url);
